@@ -1,28 +1,33 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TV Show Project | Carlos Abreu (carlosyabreu)</title>
-    <link href="style.css" rel="stylesheet">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TV Show Project Level 400</title>
+    <link rel="stylesheet" href="style.css" />
   </head>
 
   <body>
     <section class="controls">
-      <input type="text" id="search-input" placeholder="Search episodes..." />
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Search episodes..."
+      />
+
+      <select id="show-select">
+        <option value="">Select a show</option>
+      </select>
 
       <select id="episode-select">
         <option value="">All episodes</option>
       </select>
 
-      <span id="search-count">Displaying 73/73 episodes</span>
+      <span id="search-count">Loading shows...</span>
     </section>
 
     <div id="root"></div>
 
-    <!-- JS files (defer ensures everything loads in correct order) -->
-    <script src="episodes.js" defer></script>
     <script src="script.js" defer></script>
   </body>
 </html>

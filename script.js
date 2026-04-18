@@ -1,56 +1,186 @@
-let allEpisodes;
+// Global data
+let allShows = [];
+let currentEpisodes = [];
+const episodesCache = {};
 
 /**
- * Initial setup – called when the page loads.
+ * Run when the page finishes loading
  */
-function setup() {
+window.onload = () => {
+  setup();
+};
 
-  allEpisodes = getAllEpisodes();
-  makePageForEpisodes(allEpisodes);
-
-  populateSelect(allEpisodes);
-
+/**
+ * Initial setup
+ */
+async function setup() {
   const searchInput = document.getElementById("search-input");
   const searchCount = document.getElementById("search-count");
   const episodeSelect = document.getElementById("episode-select");
+  const showSelect = document.getElementById("show-select");
 
-  // 🔍 SEARCH
-  searchInput.addEventListener("input", (event) => {
-    const searchTerm = event.target.value.toLowerCase();
+  // load all shows into dropdown
+  await loadShows();
 
-    const filteredEpisodes = allEpisodes.filter((episode) => {
-      const name = episode.name || "";
-      const summary = episode.summary || "";
-
-      return (
-        name.toLowerCase().includes(searchTerm) ||
-        summary.toLowerCase().includes(searchTerm)
-      );
-    });
-
-    makePageForEpisodes(filteredEpisodes);
-    searchCount.textContent = `Displaying ${filteredEpisodes.length}/${allEpisodes.length} episodes`;
+  // SEARCH
+  searchInput.addEventListener("input", () => {
+    renderFilteredEpisodes();
   });
 
-  // ⬇️ DROPDOWN
-  episodeSelect.addEventListener("change", (event) => {
-    const selectedId = event.target.value;
+  // EPISODE DROPDOWN
+  episodeSelect.addEventListener("change", () => {
+    renderFilteredEpisodes();
+  });
 
-    if (selectedId === "") {
-      makePageForEpisodes(allEpisodes);
-      searchCount.textContent = `Displaying ${allEpisodes.length}/${allEpisodes.length} episodes`;
-    } else {
-      const selectedEpisode = allEpisodes.filter(
-        (ep) => ep.id.toString() === selectedId
-      );
-      makePageForEpisodes(selectedEpisode);
-      searchCount.textContent = `Displaying 1/${allEpisodes.length} episodes`;
+  // SHOW DROPDOWN
+  showSelect.addEventListener("change", async (event) => {
+    const showId = event.target.value;
+
+    if (showId === "") {
+      currentEpisodes = [];
+      clearEpisodeSelect();
+      makePageForEpisodes([]);
+      searchCount.textContent = "Select a show";
+      return;
     }
+
+    await loadEpisodes(showId);
   });
 }
 
 /**
- * Populate dropdown
+ * Fetch all shows only once
+ */
+async function loadShows() {
+  try {
+    const response = await fetch("https://api.tvmaze.com/shows");
+
+    if (!response.ok) {
+      throw new Error("Could not load shows");
+    }
+
+    allShows = await response.json();
+
+    // alphabetical order
+    allShows.sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+
+    populateShowSelect(allShows);
+
+    document.getElementById("search-count").textContent =
+      "Select a show";
+  } catch (error) {
+    document.getElementById("search-count").textContent =
+      "Error loading shows";
+    console.error(error);
+  }
+}
+
+/**
+ * Fill show dropdown
+ */
+function populateShowSelect(shows) {
+  const showSelect = document.getElementById("show-select");
+
+  showSelect.innerHTML = `<option value="">Select a show</option>`;
+
+  shows.forEach((show) => {
+    const option = document.createElement("option");
+    option.value = show.id;
+    option.textContent = show.name;
+    showSelect.appendChild(option);
+  });
+}
+
+/**
+ * Fetch episodes for one show
+ */
+async function loadEpisodes(showId) {
+  const searchCount = document.getElementById("search-count");
+
+  try {
+    // use cache if already loaded
+    if (episodesCache[showId]) {
+      currentEpisodes = episodesCache[showId];
+      updateUI();
+      return;
+    }
+
+    searchCount.textContent = "Loading episodes...";
+
+    const response = await fetch(
+      `https://api.tvmaze.com/shows/${showId}/episodes`
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not load episodes");
+    }
+
+    const episodes = await response.json();
+
+    episodesCache[showId] = episodes;
+    currentEpisodes = episodes;
+
+    updateUI();
+  } catch (error) {
+    searchCount.textContent = "Error loading episodes";
+    console.error(error);
+  }
+}
+
+/**
+ * Update page after loading episodes
+ */
+function updateUI() {
+  clearEpisodeSelect();
+  populateSelect(currentEpisodes);
+  renderFilteredEpisodes();
+}
+
+/**
+ * Render search + episode filtering together
+ */
+function renderFilteredEpisodes() {
+  const searchInput = document.getElementById("search-input");
+  const episodeSelect = document.getElementById("episode-select");
+  const searchCount = document.getElementById("search-count");
+
+  const searchTerm = searchInput.value.toLowerCase();
+  const selectedId = episodeSelect.value;
+
+  let filteredEpisodes = currentEpisodes.filter((episode) => {
+    const name = episode.name || "";
+    const summary = episode.summary || "";
+
+    return (
+      name.toLowerCase().includes(searchTerm) ||
+      summary.toLowerCase().includes(searchTerm)
+    );
+  });
+
+  if (selectedId !== "") {
+    filteredEpisodes = filteredEpisodes.filter(
+      (episode) => episode.id.toString() === selectedId
+    );
+  }
+
+  makePageForEpisodes(filteredEpisodes);
+
+  searchCount.textContent =
+    `Displaying ${filteredEpisodes.length}/${currentEpisodes.length} episodes`;
+}
+
+/**
+ * Reset episode dropdown
+ */
+function clearEpisodeSelect() {
+  const select = document.getElementById("episode-select");
+  select.innerHTML = `<option value="">All episodes</option>`;
+}
+
+/**
+ * Fill episode dropdown
  */
 function populateSelect(episodeList) {
   const select = document.getElementById("episode-select");
@@ -58,10 +188,9 @@ function populateSelect(episodeList) {
   episodeList.forEach((episode) => {
     const option = document.createElement("option");
     option.value = episode.id;
-    option.textContent = `${formatEpisodeCode(
-      episode.season,
-      episode.number
-    )} - ${episode.name}`;
+    option.textContent =
+      `${formatEpisodeCode(episode.season, episode.number)} - ${episode.name}`;
+
     select.appendChild(option);
   });
 }
@@ -76,7 +205,7 @@ function formatEpisodeCode(season, episode) {
 }
 
 /**
- * Create episode card
+ * Create one episode card
  */
 function createEpisodeCard(episode) {
   const article = document.createElement("article");
@@ -97,7 +226,6 @@ function createEpisodeCard(episode) {
   const imageContainer = document.createElement("div");
   imageContainer.className = "episode-image";
 
-  // 🖼️ SAFE IMAGE HANDLING
   if (episode.image && (episode.image.medium || episode.image.original)) {
     const img = document.createElement("img");
     img.src = episode.image.medium || episode.image.original;
@@ -121,14 +249,14 @@ function createEpisodeCard(episode) {
 }
 
 /**
- * Render episodes
+ * Render all episode cards
  */
 function makePageForEpisodes(episodeList) {
   const rootElem = document.getElementById("root");
   rootElem.innerHTML = "";
 
-  const episodesContainer = document.createElement("div");
-  episodesContainer.className = "episodes-container";
+  const container = document.createElement("div");
+  container.className = "episodes-container";
 
   if (episodeList.length === 0) {
     const message = document.createElement("p");
@@ -137,12 +265,9 @@ function makePageForEpisodes(episodeList) {
     return;
   }
 
-  for (const episode of episodeList) {
-    const card = createEpisodeCard(episode);
-    episodesContainer.appendChild(card);
-  }
+  episodeList.forEach((episode) => {
+    container.appendChild(createEpisodeCard(episode));
+  });
 
-  rootElem.appendChild(episodesContainer);
+  rootElem.appendChild(container);
 }
-
-window.onload = setup;
