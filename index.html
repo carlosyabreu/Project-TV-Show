@@ -3,33 +3,44 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TV Show Project | Level 400</title>
+    <title>TV Show Project | Level 500</title>
     <link href="style.css" rel="stylesheet">
   </head>
 
   <body>
-    <section class="controls">
+    <!-- Global controls (used in both views) -->
+    <header class="controls">
+      <!-- Show search (visible only in shows view) -->
+      <input type="text" id="show-search-input" placeholder="Search shows by name, genre or summary..." />
 
-      <!-- SEARCH -->
-      <input type="text" id="search-input" placeholder="Search episodes..." />
+      <!-- Episode search (visible only in episodes view) -->
+      <input type="text" id="episode-search-input" placeholder="Search episodes..." />
 
-      <!-- ✅ NEW: SHOW SELECT -->
-      <select id="show-select">
-        <option value="">Select a show</option>
-      </select>
-
-      <!-- EPISODE SELECT -->
+      <!-- Episode dropdown (visible only in episodes view) -->
       <select id="episode-select">
         <option value="">All episodes</option>
       </select>
 
-      <!-- COUNT -->
-      <span id="search-count">Loading shows...</span>
-    </section>
+      <!-- Episode counter -->
+      <span id="search-count"></span>
 
-    <div id="root">
-      <div class="loading-message">Loading shows...</div>
+      <!-- Back to shows link (visible only in episodes view) -->
+      <button id="back-to-shows-btn" class="back-button">← Back to Shows</button>
+    </header>
+
+    <!-- Shows listing view -->
+    <div id="shows-view">
+      <div id="shows-container" class="shows-container"></div>
     </div>
+
+    <!-- Episodes view (initially hidden) -->
+    <div id="episodes-view" style="display: none;">
+      <div id="episodes-container" class="episodes-container"></div>
+    </div>
+
+    <footer class="credit-footer">
+      <p>Data provided by <a href="https://www.tvmaze.com/" target="_blank">TVMaze.com</a></p>
+    </footer>
 
     <script src="script.js" defer></script>
   </body>
