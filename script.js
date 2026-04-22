@@ -1,8 +1,8 @@
 // ---------- Global state & cache ----------
-let allShows = [];                // array of all shows from API
-let episodesCache = {};           // { showId: episodesArray }
-let currentShow = null;           // currently selected show object
-let currentEpisodes = [];         // episodes of the current show
+let allShows = [];
+let episodesCache = {};
+let currentShow = null;
+let currentEpisodes = [];
 
 // DOM elements
 const showsView = document.getElementById("shows-view");
@@ -31,7 +31,13 @@ function updateCounter(displayedCount, totalCount) {
   searchCountSpan.textContent = `Displaying ${displayedCount}/${totalCount} episodes`;
 }
 
-// ---------- Episode rendering (from Level 400, adapted) ----------
+// Get the best available image (original > medium > none)
+function getImageUrl(imageObj) {
+  if (!imageObj) return null;
+  return imageObj.original || imageObj.medium || null;
+}
+
+// ---------- Episode rendering ----------
 function createEpisodeCard(episode) {
   const article = document.createElement("article");
   article.className = "episode-card";
@@ -45,9 +51,11 @@ function createEpisodeCard(episode) {
 
   const imageContainer = document.createElement("div");
   imageContainer.className = "episode-image";
-  if (episode.image && episode.image.medium) {
+
+  const imgUrl = getImageUrl(episode.image);
+  if (imgUrl) {
     const img = document.createElement("img");
-    img.src = episode.image.medium;
+    img.src = imgUrl;
     img.alt = episode.name;
     imageContainer.appendChild(img);
   } else {
@@ -112,12 +120,14 @@ function createShowCard(show) {
   const card = document.createElement("article");
   card.className = "show-card";
 
-  // Image
+  // Image container
   const imgContainer = document.createElement("div");
   imgContainer.className = "show-image";
-  if (show.image && show.image.medium) {
+
+  const imgUrl = getImageUrl(show.image);
+  if (imgUrl) {
     const img = document.createElement("img");
-    img.src = show.image.medium;
+    img.src = imgUrl;
     img.alt = show.name;
     imgContainer.appendChild(img);
   } else {
@@ -163,7 +173,6 @@ function renderShows(showsToRender) {
   showsToRender.forEach(show => showsContainer.appendChild(createShowCard(show)));
 }
 
-// Filter shows by name, genre, or summary
 function filterShows(searchTerm) {
   if (!searchTerm) return allShows;
   const lowerTerm = searchTerm.toLowerCase();
@@ -176,11 +185,9 @@ function filterShows(searchTerm) {
 
 // ---------- Episode loading & view switching ----------
 async function loadEpisodesForShow(show) {
-  // Show loading in episodes view
   episodesContainer.innerHTML = "<div class='loading-message'>Loading episodes...</div>";
   currentShow = show;
 
-  // Use cache if available
   if (episodesCache[show.id]) {
     currentEpisodes = episodesCache[show.id];
     afterEpisodesLoaded();
@@ -200,7 +207,6 @@ async function loadEpisodesForShow(show) {
 }
 
 function afterEpisodesLoaded() {
-  // Reset episode filters
   episodeSearchInput.value = "";
   episodeSelect.value = "";
 
@@ -208,7 +214,6 @@ function afterEpisodesLoaded() {
   renderEpisodes(currentEpisodes);
   updateCounter(currentEpisodes.length, currentEpisodes.length);
 
-  // Switch views
   showsView.style.display = "none";
   episodesView.style.display = "block";
 }
@@ -216,23 +221,19 @@ function afterEpisodesLoaded() {
 function switchToShowsView() {
   showsView.style.display = "block";
   episodesView.style.display = "none";
-  // Refresh show list (in case search was active)
   const searchTerm = showSearchInput.value;
   renderShows(filterShows(searchTerm));
 }
 
 // ---------- Event binding ----------
 function bindEvents() {
-  // Show search
   showSearchInput.addEventListener("input", (e) => {
     renderShows(filterShows(e.target.value));
   });
 
-  // Episode search and dropdown
   episodeSearchInput.addEventListener("input", filterAndRenderEpisodes);
   episodeSelect.addEventListener("change", filterAndRenderEpisodes);
 
-  // Back button
   backButton.addEventListener("click", switchToShowsView);
 }
 
@@ -242,14 +243,11 @@ async function setup() {
     const response = await fetch("https://api.tvmaze.com/shows");
     if (!response.ok) throw new Error("Failed to fetch shows");
     allShows = await response.json();
-    // Sort alphabetically (case‑insensitive)
     allShows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
-    // Initially render all shows
     renderShows(allShows);
     bindEvents();
 
-    // Show the shows view, hide episodes view
     showsView.style.display = "block";
     episodesView.style.display = "none";
   } catch (err) {
